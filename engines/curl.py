@@ -1,5 +1,7 @@
 from iota.types import *
 import cffi
+import sys
+import os
 from const import *
 from utils.list import *
 
@@ -10,7 +12,10 @@ class POW:
         self.ffi.cdef("""
         char* ccurl_pow(char* trytes, int min_weight_magnitude);
         """)
-        self.api = self.ffi.dlopen("C:\\Users\\Daniel\\PycharmProjects\\IOTAWalletCurl\\ccurl\\build\Release\\ccurl.dll")
+
+        root = os.path.dirname(sys.modules['__main__'].__file__)
+        path = os.path.join(root, 'ccurl', 'build', 'Release', 'ccurl.dll')
+        self.api = self.ffi.dlopen(path)
 
     def attach_to_tangle(self, trunk_transaction, branch_transaction, min_weight_magnitude, tx_trytes):
         trunk_trits = Hash(trunk_transaction.encode()).as_trits()
@@ -28,7 +33,7 @@ class POW:
             array_copy(branch_trits if i == 0 else trunk_trits,
                        0, trit, BRANCH_TRANSACTION_TRINARY_OFFSET, BRANCH_TRANSACTION_TRINARY_SIZE)
 
-            tryte_input = self.ffi.new('char[]', tryte.as_string().encode())
+            tryte_input = self.ffi.new('char[]', TryteString.from_trits(trit).as_bytes())
             processed_trytes = self.ffi.string(self.api.ccurl_pow(tryte_input, min_weight_magnitude)).decode()
             processed_tx_trytes.append(TryteString.from_string(processed_trytes))
 
