@@ -1,0 +1,17 @@
+C:/Users/Daniel/RubymineProjects/ccurl/build/CMakeFiles/PACKAGE.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/CMakeFiles/ccurl.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/CMakeFiles/ccurlstatic.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/CMakeFiles/INSTALL.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/CMakeFiles/ALL_BUILD.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/CMakeFiles/ZERO_CHECK.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/deps/libopencl-stub/CMakeFiles/OpenCL.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/deps/libopencl-stub/CMakeFiles/PACKAGE.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/deps/libopencl-stub/CMakeFiles/INSTALL.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/deps/libopencl-stub/CMakeFiles/ALL_BUILD.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/src/cli/CMakeFiles/trytes-to-long.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/src/cli/CMakeFiles/ccurl-cli.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/src/cli/CMakeFiles/PACKAGE.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/src/cli/CMakeFiles/ccurld.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/src/cli/CMakeFiles/ccurl-digest.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/src/cli/CMakeFiles/INSTALL.dir
+C:/Users/Daniel/RubymineProjects/ccurl/build/src/cli/CMakeFiles/ALL_BUILD.dir
