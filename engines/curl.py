@@ -14,7 +14,7 @@ class POW:
         """)
 
         root = os.path.dirname(sys.modules['__main__'].__file__)
-        path = os.path.join(root, 'ccurl', 'build', 'Release', 'ccurl.dll')
+        path = os.path.join(root, 'build', 'Release', 'ccurl.dll')
         self.api = self.ffi.dlopen(path)
 
     def attach_to_tangle(self, trunk_transaction, branch_transaction, min_weight_magnitude, tx_trytes):
@@ -26,14 +26,14 @@ class POW:
         processed_tx_trytes = []
         for tryte, trit, i in zip(tx_trytes, tx_trits, range(len(tx_trits))):
 
-            # TODO: Not even gen addr works. Probably arraycopy or conversions
             array_copy(trunk_trits if i == 0 else processed_tx_trytes[-1].as_trits(),
                        0, trit, TRUNK_TRANSACTION_TRINARY_OFFSET, TRUNK_TRANSACTION_TRINARY_SIZE)
 
             array_copy(branch_trits if i == 0 else trunk_trits,
                        0, trit, BRANCH_TRANSACTION_TRINARY_OFFSET, BRANCH_TRANSACTION_TRINARY_SIZE)
 
-            tryte_input = self.ffi.new('char[]', TryteString.from_trits(trit).as_bytes())
+            # TryteString.from_trits(trit).as_string().encode() throws an exceptions. Hack away:
+            tryte_input = self.ffi.new('char[]', TryteString.from_trits(trit)._trytes.decode().encode())
             processed_trytes = self.ffi.string(self.api.ccurl_pow(tryte_input, min_weight_magnitude)).decode()
             processed_tx_trytes.append(TryteString.from_string(processed_trytes))
 
