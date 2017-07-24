@@ -1,28 +1,47 @@
-import flask
-from flask import request
-from flask import jsonify
-
-from flask_cors import CORS, cross_origin
-
+from const import *
 from engines.curl import POW
+import json
+
+import asyncio
+from asyncio.queues import Queue, QueueFull
+import websockets
 
 
-app = flask.Flask(__name__)
-CORS(app)
-pow_engine = POW()
+# A queue to monitor and limit the number of connected clients.
+# Only allow MAX_NUM_CONNECTED_CLIENTS to be connected at the same time
+connected = Queue(MAX_NUM_CONNECTED_CLIENTS)
 
-@app.route('/attach_to_tangle')
-@cross_origin()
-def attach_to_tangle():
-    global pow_engine
+async def POWService(websocket, path):
+    global connected
 
-    trunk = request.args.get('trunk')
-    branch = request.args.get('branch')
-    min_weight_magnitude = int(request.args.get('min_weight_magnitude'))
-    tx_trytes = request.args.get('tx_trytes').split(',')
+    # Test the limit
+    try:
+        connected.put_nowait(0)
+    except QueueFull:
+        await websocket.close(503, 'Concurrency limit reached')
+        return
 
-    response = jsonify(result=','.join(pow_engine.attach_to_tangle(trunk, branch, min_weight_magnitude, tx_trytes)))
-    return response
+    # All is good. Proceed
+    try:
+        message = await websocket.recv()
+        print('Got message')
 
-if __name__ == '__main__':
-    app.run(debug=True)
+        message = json.loads(message)
+
+        trunk = message['trunk']
+        branch = message['branch']
+        tx_trytes = message['tx_trytes']
+
+        for trytes in POW(trunk, branch, tx_trytes):
+            await websocket.send(trytes)
+    finally:
+        connected.get_nowait()
+        # TODO: If curl is running, stop it.
+
+    await websocket.close(200, 'Done')
+
+
+start_server = websockets.serve(POWService, 'localhost', 8765)
+
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
