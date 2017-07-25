@@ -1,47 +1,65 @@
+from engines import reattach
+
 from const import *
 from engines.curl import POW
 import json
 
-import asyncio
-from asyncio.queues import Queue, QueueFull
-import websockets
+from tornado import websocket, web, ioloop
+
+from multiprocessing import Queue
+from queue import Full, Empty
 
 
 # A queue to monitor and limit the number of connected clients.
 # Only allow MAX_NUM_CONNECTED_CLIENTS to be connected at the same time
 connected = Queue(MAX_NUM_CONNECTED_CLIENTS)
 
-async def POWService(websocket, path):
-    global connected
 
-    # Test the limit
-    try:
-        connected.put_nowait(0)
-    except QueueFull:
-        await websocket.close(503, 'Concurrency limit reached')
-        return
+class POWService(websocket.WebSocketHandler):
+    def open(self):
+        global connected
 
-    # All is good. Proceed
-    try:
-        message = await websocket.recv()
+        # Test the limit
+        try:
+            connected.put_nowait(0)
+        except Full:
+            print('Full')
+            self.close(code=503, reason='Concurrency limit reached')
+
+    def on_message(self, message):
         print('Got message')
 
         message = json.loads(message)
+        if message['type'] == 'POW':
+            self._do_pow(message)
+        elif message['type'] == 'survey_tx':
+            self._add_to_pending(message)
 
+    def _do_pow(self, message):
         trunk = message['trunk']
         branch = message['branch']
         tx_trytes = message['tx_trytes']
 
         for trytes in POW(trunk, branch, tx_trytes):
-            await websocket.send(trytes)
-    finally:
+            self.write_message(trytes)
+
+    def _add_to_pending(self, message):
+        if 'bundle_hash' in message['bundle_hash']:
+            reattach.reattach_engine.add(message['bundle_hash'])
+
+    def on_close(self):
+        global connected
         connected.get_nowait()
-        # TODO: If curl is running, stop it.
 
-    await websocket.close(200, 'Done')
+        print("WebSocket closed")
 
 
-start_server = websockets.serve(POWService, 'localhost', 8765)
+app = web.Application([
+    (r'/', POWService),
+])
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+if __name__ == '__main__':
+    reattach.start()
+
+    app.listen(8765)
+    ioloop.IOLoop.instance().start()

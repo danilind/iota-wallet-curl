@@ -9,7 +9,7 @@ async def runner():
         print('Sending')
         await websocket.send(json.dumps({'trunk': trunk, 'branch': branch, 'tx_trytes': tx_trytes}))
 
-        while True:
+        for i in range(len(tx_trytes)):
             message = await websocket.recv()
             print('Got {}'.format(message))
 
