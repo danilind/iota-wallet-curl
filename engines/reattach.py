@@ -3,24 +3,26 @@ from datetime import datetime
 
 import const
 from collections import deque
-from threading import Lock
+from multiprocessing import Lock
 from multiprocessing import Process
 
 from entities import PendingBundle
 from engines.curl import POW
 
-from iota import Iota, HttpAdapter
+from iota import Iota
+from iota.transaction import Transaction
 
 
 class ReattachEngine:
-    iota = Iota(HttpAdapter('https://d3c5drf0y7sksv.cloudfront.net/'))
+    # TODO: What happens if the connection closes?
+    iota = Iota('https://d3c5drf0y7sksv.cloudfront.net/')
 
     queue = deque(maxlen=const.MAX_NUM_PENDING_TXS)
     queue_lock = Lock()
 
     def add(self, bundle):
         # Has to be thread safe because of the usage by the server
-        if not self.queue_lock.aquire():
+        if not self.queue_lock.acquire():
             return
 
         try:
@@ -32,8 +34,14 @@ class ReattachEngine:
         self.queue_lock.release()
 
     def add_by_bundle_hash(self, bundle_hash):
-        txs = self.iota.find_transactions(bundles=[bundle_hash])
-        bundle = PendingBundle(txs, bundle_hash)
+
+        bundle_hash = bundle_hash.encode('ascii')
+
+        tx_hashes = self.iota.find_transactions(bundles=[bundle_hash])['hashes']
+        trytes = self.iota.get_trytes(tx_hashes)['trytes']
+        txs = [Transaction.from_tryte_string(t) for t in trytes]
+
+        bundle = PendingBundle(bundle_hash, txs)
         self.add(bundle)
 
     def survey(self):
@@ -46,9 +54,10 @@ class ReattachEngine:
                 if self._is_reattachable(queued_bundle):
                     self._reattach(queued_bundle)
                     self.add(queued_bundle)
-                # Else the bundle has confirmed, and can remain discarded
+                # else: The bundle has confirmed, and can remain discarded
 
-        except IndexError:
+        except Exception as e:
+            print(str(e))
             return
 
     def _is_time_to_reattach(self, entry):
