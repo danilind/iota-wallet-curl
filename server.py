@@ -45,14 +45,13 @@ class POWService(websocket.WebSocketHandler):
         for trytes in POW(trunk, branch, tx_trytes):
             self.write_message({ 'trytes': trytes })
 
+        active_pow.get_nowait()
+
     def _add_to_pending(self, message):
         if 'bundle_hash' in message['bundle_hash']:
             reattach.reattach_engine.add(message['bundle_hash'])
 
     def on_close(self):
-        global active_pow
-        active_pow.get_nowait()
-
         print("WebSocket closed")
 
     def check_origin(self, origin):
