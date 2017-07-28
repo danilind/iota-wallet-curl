@@ -7,54 +7,77 @@ from threading import Lock
 from multiprocessing import Process
 
 from entities import PendingBundle
+from engines.curl import POW
 
-from iota import Iota
+from iota import Iota, HttpAdapter
 
 
 class ReattachEngine:
+    iota = Iota(HttpAdapter('https://d3c5drf0y7sksv.cloudfront.net/'))
+
     queue = deque(maxlen=const.MAX_NUM_PENDING_TXS)
     queue_lock = Lock()
 
-    def add(self, bundle_hash):
+    def add(self, bundle):
         # Has to be thread safe because of the usage by the server
         if not self.queue_lock.aquire():
             return
 
         try:
             if not self.queue.size >= const.MAX_NUM_PENDING_TXS - 1:
-                self.queue.append(PendingBundle(bundle_hash))
+                self.queue.append(bundle)
         except:
             pass
 
         self.queue_lock.release()
 
+    def add_by_bundle_hash(self, bundle_hash):
+        txs = self.iota.find_transactions(bundles=[bundle_hash])
+        bundle = PendingBundle(txs, bundle_hash)
+        self.add(bundle)
+
     def survey(self):
+        print('Starting survey')
         # Not thread safe (don't need to be)
         try:
             while self._is_time_to_reattach(self.queue[0]):
-                queued_bundle = self.queue.pop(0)
+                queued_bundle = self.queue.popleft()
 
                 if self._is_reattachable(queued_bundle):
                     self._reattach(queued_bundle)
                     self.add(queued_bundle)
+                # Else the bundle has confirmed, and can remain discarded
 
         except IndexError:
             return
 
-    def _is_time_to_reattach(self, next):
+    def _is_time_to_reattach(self, entry):
         # TODO: Also check if the server is busy
-        return (datetime.now() - next.time_last_attachment).total_seconds() > const.MIN_NUM_SECS_BETWEEN_ATTACHMENTS
+        return (datetime.now() - entry.time_last_attachment).total_seconds() > const.MIN_NUM_SECS_BETWEEN_ATTACHMENTS
 
     def _is_reattachable(self, queued_bundle):
-        iota = Iota()
-        bundle = iota.get_bundles(queued_bundle.tail)
-        tx_to_approve = iota.get_transactions_to_approve(const.DEPTH)
-        # Attach to tangle
-        
-        iota.broadcast_and_store(trytes)
+        # Returns true if all balances from the input addresses are larger or equal to the outgoing amount in the bundle
+        spent_addresses = set([x.address for x in queued_bundle.txs if x.value < 0])
+        balances = self.iota.get_balances(spent_addresses, 100)
+
+        out_txs = {addr: 0 for addr in spent_addresses}
+        for tx in queued_bundle.txs:
+            if tx.address in out_txs:
+                out_txs[tx.address] += abs(tx.value)
+
+        return all([out_txs[addr] >= balance for addr, balance in zip(spent_addresses, balances)])
 
     def _reattach(self, queued_bundle):
-        pass
+        tx_to_approve = self.iota.get_transactions_to_approve(const.DEPTH)
+        branch = tx_to_approve['branchTransaction']
+        trunk = tx_to_approve['trunkTransaction']
+
+        # Attach to tangle
+        processed_trytes = []
+        for trytes in POW(trunk, branch, queued_bundle.txs):
+            processed_trytes.append(trytes)
+
+        self.iota.broadcast_and_store(processed_trytes)
 
 
 reattach_engine = ReattachEngine()

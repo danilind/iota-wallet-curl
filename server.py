@@ -48,8 +48,8 @@ class POWService(websocket.WebSocketHandler):
         active_pow.get_nowait()
 
     def _add_to_pending(self, message):
-        if 'bundle_hash' in message['bundle_hash']:
-            reattach.reattach_engine.add(message['bundle_hash'])
+        if 'bundle_hash' in message:
+            reattach.reattach_engine.add_by_bundle_hash(message['bundle_hash'])
 
     def on_close(self):
         print("WebSocket closed")

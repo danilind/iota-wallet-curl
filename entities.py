@@ -2,9 +2,7 @@ from datetime import datetime
 
 
 class PendingBundle:
-    time_last_attachment = None
-    bundle_hash = None
-
-    def __init__(self, bundle_hash):
+    def __init__(self, bundle_hash, txs):
         self.time_last_attachment = datetime.now()
         self.bundle_hash = bundle_hash
+        self.txs = txs
