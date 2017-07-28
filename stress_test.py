@@ -8,7 +8,7 @@ from multiprocessing import Process
 
 
 async def runner():
-    async with websockets.connect('ws://localhost:8765') as websocket:
+    async with websockets.connect('wss://localhost:8765') as websocket:
         print('Sending')
         await websocket.send(json.dumps({'trunk': trunk, 'branch': branch, 'tx_trytes': tx_trytes}))
 
