@@ -5,7 +5,7 @@ import asyncio
 import websockets
 
 async def runner():
-    async with websockets.connect('ws://localhost:8765') as websocket:
+    async with websockets.connect('ws://localhost:8765/pow') as websocket:
         print('Sending')
         await websocket.send(json.dumps({'trunk': trunk, 'branch': branch, 'tx_trytes': tx_trytes, 'type': 'POW'}))
 

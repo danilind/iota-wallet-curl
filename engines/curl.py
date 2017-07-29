@@ -24,11 +24,11 @@ def POW(trunk_transaction, branch_transaction, tx_trytes):
 
     prev = None
     for trit, i in zip(tx_trits, range(len(tx_trits))):
-        array_copy(trunk_trits if i == 0 else prev.as_trits(),
-                   0, trit, TRUNK_TRANSACTION_TRINARY_OFFSET, TRUNK_TRANSACTION_TRINARY_SIZE)
+        trit = array_copy(trunk_trits if i == 0 else prev.as_trits(),
+                          0, trit, TRUNK_TRANSACTION_TRINARY_OFFSET, TRUNK_TRANSACTION_TRINARY_SIZE)
 
-        array_copy(branch_trits if i == 0 else trunk_trits,
-                   0, trit, BRANCH_TRANSACTION_TRINARY_OFFSET, BRANCH_TRANSACTION_TRINARY_SIZE)
+        trit = array_copy(branch_trits if i == 0 else trunk_trits,
+                          0, trit, BRANCH_TRANSACTION_TRINARY_OFFSET, BRANCH_TRANSACTION_TRINARY_SIZE)
 
         # TryteString.from_trits(trit).as_string().encode() throws an exceptions. Hack away:
         tryte_input = ffi.new('char[]', bytes(TryteString.from_trits(trit)._trytes))

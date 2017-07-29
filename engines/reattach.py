@@ -21,20 +21,20 @@ class ReattachEngine:
     queue_lock = Lock()
 
     def add(self, bundle):
+        print('Adding bundle')
         # Has to be thread safe because of the usage by the server
         if not self.queue_lock.acquire():
+            print('Could not acquire lock')
             return
 
-        try:
-            if not self.queue.size >= const.MAX_NUM_PENDING_TXS - 1:
-                self.queue.append(bundle)
-        except:
-            pass
+        if not len(self.queue) >= const.MAX_NUM_PENDING_TXS:
+            self.queue.append(bundle)
+            print('Added')
 
         self.queue_lock.release()
 
     def add_by_bundle_hash(self, bundle_hash):
-
+        print('Adding by hash')
         bundle_hash = bundle_hash.encode('ascii')
 
         tx_hashes = self.iota.find_transactions(bundles=[bundle_hash])['hashes']
@@ -49,9 +49,11 @@ class ReattachEngine:
         # Not thread safe (don't need to be)
         try:
             while self._is_time_to_reattach(self.queue[0]):
+                print('It\'s time')
                 queued_bundle = self.queue.popleft()
 
                 if self._is_reattachable(queued_bundle):
+                    print('Reattaching')
                     self._reattach(queued_bundle)
                     self.add(queued_bundle)
                 # else: The bundle has confirmed, and can remain discarded
