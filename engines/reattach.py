@@ -59,8 +59,9 @@ class ReattachEngine:
                     self.add(queued_bundle)
                 # else: The bundle has confirmed, and can remain discarded
             except Exception as e:
-                pow_queue.pop()
                 print(e)
+            finally:
+                pow_queue.pop()
 
     def _is_time_to_reattach(self):
         try:
