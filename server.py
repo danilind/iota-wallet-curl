@@ -1,23 +1,24 @@
 from engines import reattach
-
-from const import *
+from utils.pow_queue import pow_queue
 from engines.curl import POW
+
 import json
+import datetime
 
 from tornado import websocket, web, ioloop
 
-from multiprocessing import Queue
-from queue import Full, Empty
 
+class PowService(websocket.WebSocketHandler):
+    timeout = None
 
-# A queue to monitor and limit the number of ongoing pows.
-# Only allow MAX_NUM_CONCURRENT_POW to be active at the same time
-active_pow = Queue(MAX_NUM_CONCURRENT_POW)
+    def data_received(self, chunk):
+        pass
 
-
-class POWService(websocket.WebSocketHandler):
     def open(self):
         print('Open')
+
+        # Sets a hard limit on the time a connection can be open
+        self.timeout = ioloop.IOLoop.current().add_timeout(datetime.timedelta(minutes=2), self.close)
 
     def on_message(self, message):
         print('Got message')
@@ -30,12 +31,8 @@ class POWService(websocket.WebSocketHandler):
             self.close(202, "We're done")
 
     def _do_pow(self, message):
-        global active_pow
-
         # Test the limit
-        try:
-            active_pow.put_nowait(0)
-        except Full:
+        if not pow_queue.try_push():
             return 'Concurrency limit reached'
 
         trunk = message['trunk']
@@ -45,7 +42,7 @@ class POWService(websocket.WebSocketHandler):
         for trytes in POW(trunk, branch, tx_trytes):
             self.write_message({ 'trytes': trytes })
 
-        active_pow.get_nowait()
+        pow_queue.pop()
 
     def _add_to_pending(self, message):
         if 'bundle_hash' in message:
@@ -59,7 +56,7 @@ class POWService(websocket.WebSocketHandler):
 
 
 app = web.Application([
-    (r'/pow', POWService),
+    (r'/pow', PowService),
 ])
 
 if __name__ == '__main__':
