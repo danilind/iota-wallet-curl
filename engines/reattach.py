@@ -59,7 +59,7 @@ class ReattachEngine:
                     self.add(queued_bundle)
                 # else: The bundle has confirmed, and can remain discarded
             except Exception as e:
-                print(e)
+                print(str(e))
             finally:
                 pow_queue.pop()
 

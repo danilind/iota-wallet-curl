@@ -1,6 +1,7 @@
 from engines import reattach
 from utils.pow_queue import pow_queue
 from engines.curl import POW
+from const import *
 
 import json
 import datetime
@@ -18,7 +19,7 @@ class PowService(websocket.WebSocketHandler):
         print('Open')
 
         # Sets a hard limit on the time a connection can be open
-        self.timeout = ioloop.IOLoop.current().add_timeout(datetime.timedelta(minutes=2), self.close)
+        self.timeout = ioloop.IOLoop.current().add_timeout(datetime.timedelta(minutes=MAX_NUM_MIN_OPEN_CONNECTION), self.close)
 
     def on_message(self, message):
         print('Got message')
@@ -33,14 +34,15 @@ class PowService(websocket.WebSocketHandler):
     def _do_pow(self, message):
         # Test the limit
         if not pow_queue.try_push():
-            return 'Concurrency limit reached'
+            print('Concurrency limit reached')
+            return
 
         trunk = message['trunk']
         branch = message['branch']
         tx_trytes = message['tx_trytes']
 
         for trytes in POW(trunk, branch, tx_trytes):
-            self.write_message({ 'trytes': trytes })
+            self.write_message({'trytes': trytes})
 
         pow_queue.pop()
 

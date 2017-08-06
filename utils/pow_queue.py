@@ -12,12 +12,11 @@ class PowQueue:
     def pop(self):
         self.active_pow.get_nowait()
 
-    def push(self):
-        self.active_pow.put_nowait(0)
-
     def try_push(self):
         try:
-            self.push()
+            self.active_pow.put(None)
+            print('Added a job')
+            return True
         except Full:
             return False
 
